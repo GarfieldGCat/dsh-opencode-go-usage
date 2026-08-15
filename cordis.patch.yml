@@ -1,0 +1,11 @@
+# dsh-opencode-go-usage bundle patch.
+#
+# This row mounts the Host half of the plugin. The browser half is discovered
+# from the same package through package.json "dsh.client".
+- insert:
+    - id: opencode-go-usage
+      name: dsh-opencode-go-usage
+      config:
+        baseUrl: https://opencode.ai/zen/go/v1/usage
+        timeoutMs: 15000
+        providerId: opencode-go
