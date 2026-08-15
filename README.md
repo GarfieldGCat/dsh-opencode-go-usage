@@ -1,65 +1,65 @@
 # dsh-opencode-go-usage
 
-一个 DeepSeek Harness Web 插件：在聊天输入框的上下文状态区域旁边显示
-**OpenCode Go** 套餐额度。
+A DeepSeek Harness web plugin that shows your **OpenCode Go** quota next to the
+context status area in the chat composer.
 
-- 鼠标悬停图标：显示 5 小时滚动额度剩余，并开始自动查询（受 15 秒自动刷新间隔限制）
-- 点击图标：展开面板，显示 5h / 每周 / 每月额度的剩余、已用百分比和重置时间
-- 只在当前会话选择的模型提供商是 `opencode-go` 时显示图标
-- 缓存最后一次成功查询：再次打开时立即显示缓存结果和查询时间，随后后台静默刷新
-- 查询进行中时，悬停提示会显示 `刷新中…`；此时点击展开不会重复发起查询
-- 自动查询间隔为 15 秒：15 秒内不会重复自动查询，但手动点击“刷新”始终会查询
+- Hover the icon: shows the 5-hour rolling quota remaining and starts an auto refresh (throttled to once every 15 seconds)
+- Click the icon: opens a panel with remaining / used percentages and reset times for 5h, weekly, and monthly windows
+- The icon is visible only when the current session's selected provider is `opencode-go`
+- Caches the last successful result globally: reopening the panel shows cached data and last query time immediately, then refreshes in the background
+- While a query is in flight, the hover tooltip shows `refreshing…`; clicking the icon during that time does not start a duplicate request
+- Auto refresh is limited to once per 15 seconds; manual refresh always queries
 
-## 截图
+## Demo
 
-安装并重启 `dsh web` 后，打开一个使用 `opencode-go` 的会话，输入框右侧会
-出现一个小图标。点击后弹出：
+After installing and restarting `dsh web`, open a session using `opencode-go`.
+A small icon appears on the right side of the composer. Click it to see:
 
 ```text
-OpenCode Go 额度
-5h    剩余 85%
-周    剩余 71%
-月    剩余 93%
-上次查询: 14:32:08 · 刷新中…
+OpenCode Go quota
+5h    left 85%
+Wk    left 71%
+Mo    left 93%
+last query: 14:32:08 · refreshing…
 ```
 
-## 安装
+## Install
 
-### 从 GitHub 安装（推荐）
+### From GitHub (recommended)
 
 ```sh
-dsh plugin --profile web add github:你的用户名/dsh-opencode-go-usage
+dsh plugin --profile web add github:your-username/dsh-opencode-go-usage
 ```
 
-安装完成后重启：
+Then restart:
 
 ```sh
 dsh web
 ```
 
-建议使用 tag 固定版本：
+Pin a release tag for stable installs:
 
 ```sh
-dsh plugin --profile web add github:你的用户名/dsh-opencode-go-usage#v0.1.0
+dsh plugin --profile web add github:your-username/dsh-opencode-go-usage#v0.1.0
 ```
 
-### 从本地目录安装
+### From a local directory
 
 ```sh
-git clone https://github.com/你的用户名/dsh-opencode-go-usage.git
+git clone https://github.com/your-username/dsh-opencode-go-usage.git
 cd dsh-opencode-go-usage
 npm install
 dsh plugin --profile web add ./dsh-opencode-go-usage
 ```
 
-然后重启 `dsh web`。
+Then restart `dsh web`.
 
-> `npm install` 是为了安装 `typert.host.js` 依赖的 `zod`。通过
-> `dsh plugin add github:...` 安装时，pnpm 会自动安装 `dependencies`。
+> `npm install` installs `zod`, which `typert.host.js` needs. When installing
+> via `dsh plugin add github:...`, pnpm installs `dependencies` automatically.
 
-## 配置
+## Configuration
 
-插件行可以通过 web profile 的 `cordis.patch.yml` 覆盖配置：
+You can override the plugin config in your web profile's `cordis.patch.yml`:
 
 ```yaml
 - id: opencode-go-usage
@@ -70,28 +70,27 @@ dsh plugin --profile web add ./dsh-opencode-go-usage
     providerId: opencode-go
 ```
 
-| 配置项 | 默认值 | 说明 |
+| Key | Default | Description |
 | --- | --- | --- |
-| `baseUrl` | `https://opencode.ai/zen/go/v1/usage` | OpenCode Go 用量接口 |
-| `timeoutMs` | `15000` | 查询超时时间（毫秒） |
-| `providerId` | `opencode-go` | 需要匹配的模型提供商 id |
+| `baseUrl` | `https://opencode.ai/zen/go/v1/usage` | OpenCode Go usage endpoint |
+| `timeoutMs` | `15000` | Request timeout in milliseconds |
+| `providerId` | `opencode-go` | Provider id that must match the current model provider |
 
-## API Key 解析顺序
+## API key resolution
 
-1. DSH credentials seam / 环境变量 `OPENCODE_GO_API_KEY`
-2. `~/.local/share/opencode/auth.json` 中的 `opencode-go` 条目
-   （找不到时回退到 `opencode`），且 `type` 为 `api`
+1. DSH credentials seam / environment variable `OPENCODE_GO_API_KEY`
+2. `~/.local/share/opencode/auth.json`, entry `opencode-go` (falls back to `opencode`) with `type: "api"`
 
-## 工作原理
+## How it works
 
-### 用量接口
+### Usage endpoint
 
 ```http
 GET https://opencode.ai/zen/go/v1/usage
 Authorization: Bearer <API_KEY>
 ```
 
-返回示例：
+Example response:
 
 ```json
 {
@@ -103,44 +102,49 @@ Authorization: Bearer <API_KEY>
 }
 ```
 
-接口返回的是已用百分比，插件显示 `剩余 = 100 - percent`。
+The endpoint returns used percentages. The plugin displays `remaining = 100 - percent`.
 
-### 插件结构
+### Plugin structure
 
-| 文件 | 作用 |
+| File | Purpose |
 | --- | --- |
-| `index.js` | Host 端：提供 `opencodeUsage` Remote 服务，读取 API Key 并查询用量 |
-| `typert.host.js` | Typert Host manifest |
-| `client.js` | Web 端：在 `conversation.input.right` 注册图标和弹出面板 |
-| `cordis.patch.yml` | Bundle patch，自动挂载 Host 插件行 |
-| `package.json` | `dsh.bundle` + `dsh.client` 双端声明 |
+| `index.js` | Host side: provides the `opencodeUsage` Remote service, resolves the API key, and queries usage |
+| `typert.host.js` | Typert host manifest |
+| `client.js` | Web side: registers the icon in `conversation.input.right` and renders the popover |
+| `cordis.patch.yml` | Bundle patch that mounts the host plugin automatically |
+| `package.json` | Declares `dsh.bundle` + `dsh.client` |
 
-### 显示条件
+### Visibility condition
 
-Web 端通过 `modelDirectories` 读取当前会话实际选择的 provider：
+The web client reads the current session's selected provider via `modelDirectories`:
 
-- 当前 provider 为 `opencode-go`：显示图标
-- 当前 provider 不是 `opencode-go`：不显示图标
+- current provider is `opencode-go` → show the icon
+- current provider is not `opencode-go` → hide the icon
 
-## 开发
+## Development
 
 ```sh
 npm install
 
-# 语法检查
+# Syntax checks
 node --check index.js
 node --check typert.host.js
 node --check client.js
 ```
 
-本地 link 安装时，如果插件目录没有 `node_modules`，先执行一次 `npm install`。
+For local `link:` installs, run `npm install` in the plugin directory if
+`node_modules` is missing.
 
-## 已知限制
+## Known limitations
 
-- 用量接口尚未写入 OpenCode 公开文档，未来可能变更。
-- 接口只返回使用百分比，不返回金额；插件展示百分比和重置时间。
-- 缓存是全局缓存：同一个 OpenCode Go 账号在不同会话中的额度查询结果一致。
+- The usage endpoint is undocumented and may change in the future.
+- The endpoint only returns percentages, not dollar amounts; the plugin shows percentages and reset times.
+- The cache is global: the same OpenCode Go account shares the same quota across sessions.
 
 ## License
 
 MIT
+
+---
+
+[中文说明](./README.zh-CN.md)

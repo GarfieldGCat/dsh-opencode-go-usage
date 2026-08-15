@@ -20,7 +20,8 @@
     "typert.host.js",
     "README.md",
     "LICENSE",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "README.zh-CN.md"
   ],
   "exports": {
     ".": "./index.js",
