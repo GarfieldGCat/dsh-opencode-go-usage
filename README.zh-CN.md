@@ -28,7 +28,7 @@ OpenCode Go 额度
 ### 从 GitHub 安装（推荐）
 
 ```sh
-dsh plugin --profile web add github:你的用户名/dsh-opencode-go-usage
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage
 ```
 
 安装完成后重启：
@@ -40,22 +40,8 @@ dsh web
 建议使用 tag 固定版本：
 
 ```sh
-dsh plugin --profile web add github:你的用户名/dsh-opencode-go-usage#v0.1.0
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.1.2
 ```
-
-### 从本地目录安装
-
-```sh
-git clone https://github.com/你的用户名/dsh-opencode-go-usage.git
-cd dsh-opencode-go-usage
-npm install
-dsh plugin --profile web add ./dsh-opencode-go-usage
-```
-
-然后重启 `dsh web`。
-
-> `npm install` 是为了安装 `typert.host.js` 依赖的 `zod`。通过
-> `dsh plugin add github:...` 安装时，pnpm 会自动安装 `dependencies`。
 
 ## 配置
 
@@ -121,19 +107,6 @@ Web 端通过 `modelDirectories` 读取当前会话实际选择的 provider：
 
 - 当前 provider 为 `opencode-go`：显示图标
 - 当前 provider 不是 `opencode-go`：不显示图标
-
-## 开发
-
-```sh
-npm install
-
-# 语法检查
-node --check index.js
-node --check typert.host.js
-node --check client.js
-```
-
-本地 link 安装时，如果插件目录没有 `node_modules`，先执行一次 `npm install`。
 
 ## 已知限制
 

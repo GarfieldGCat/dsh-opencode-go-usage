@@ -28,7 +28,7 @@ last query: 14:32:08 · refreshing…
 ### From GitHub (recommended)
 
 ```sh
-dsh plugin --profile web add github:your-username/dsh-opencode-go-usage
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage
 ```
 
 Then restart:
@@ -40,22 +40,8 @@ dsh web
 Pin a release tag for stable installs:
 
 ```sh
-dsh plugin --profile web add github:your-username/dsh-opencode-go-usage#v0.1.0
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.1.2
 ```
-
-### From a local directory
-
-```sh
-git clone https://github.com/your-username/dsh-opencode-go-usage.git
-cd dsh-opencode-go-usage
-npm install
-dsh plugin --profile web add ./dsh-opencode-go-usage
-```
-
-Then restart `dsh web`.
-
-> `npm install` installs `zod`, which `typert.host.js` needs. When installing
-> via `dsh plugin add github:...`, pnpm installs `dependencies` automatically.
 
 ## Configuration
 
@@ -120,20 +106,6 @@ The web client reads the current session's selected provider via `modelDirectori
 
 - current provider is `opencode-go` → show the icon
 - current provider is not `opencode-go` → hide the icon
-
-## Development
-
-```sh
-npm install
-
-# Syntax checks
-node --check index.js
-node --check typert.host.js
-node --check client.js
-```
-
-For local `link:` installs, run `npm install` in the plugin directory if
-`node_modules` is missing.
 
 ## Known limitations
 
