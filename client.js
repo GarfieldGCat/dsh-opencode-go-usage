@@ -18,6 +18,26 @@ window.__ModuleLoader__.load({
     // so the cache is global rather than per-session.
     let lastResult = null;
 
+    // Global in-flight query state so multiple composer icons never issue
+    // duplicate OpenCode Go requests at the same time.
+    const AUTO_REFRESH_MS = 15000;
+    const queryState = {
+      refreshing: false,
+      listeners: new Set(),
+      get() {
+        return this.refreshing;
+      },
+      set(value) {
+        if (this.refreshing === value) return;
+        this.refreshing = value;
+        for (const listener of this.listeners) listener();
+      },
+      subscribe(listener) {
+        this.listeners.add(listener);
+        return () => this.listeners.delete(listener);
+      },
+    };
+
     // Required client services: slots for the composer right-side seat, locale
     // for copy, remote for the Host RPC, and modelDirectories to read the
     // current session's selected provider.
@@ -118,6 +138,10 @@ window.__ModuleLoader__.load({
         lineHeight: 1.4,
         pointerEvents: "none",
         boxShadow: "0 4px 16px rgba(0,0,0,.16)",
+      },
+      tooltipRefresh: {
+        marginLeft: 6,
+        color: "var(--dsw-alias-label-tertiary)",
       },
       panel: {
         position: "absolute",
@@ -276,15 +300,19 @@ window.__ModuleLoader__.load({
       const provider = dirState.current && dirState.current.provider;
       const [open, setOpen] = React.useState(false);
       const [hover, setHover] = React.useState(false);
-      const [refreshing, setRefreshing] = React.useState(false);
+      const [refreshing, setRefreshing] = React.useState(queryState.get());
       const [cache, setCache] = React.useState(() => lastResult);
       const [state, setState] = React.useState(() => {
         return lastResult ? { kind: "done", value: lastResult.value } : { kind: "idle" };
       });
       const rootRef = React.useRef(null);
 
+      React.useEffect(() => queryState.subscribe(() => setRefreshing(queryState.get())), []);
+
       const refresh = React.useCallback(() => {
-        setRefreshing(true);
+        // One global in-flight query at a time.
+        if (queryState.get()) return;
+        queryState.set(true);
         Promise.resolve()
           .then(() => query())
           .then((result) => {
@@ -310,8 +338,17 @@ window.__ModuleLoader__.load({
               setState({ kind: "failure", message: String((e && e.message) || e) });
             }
           })
-          .finally(() => setRefreshing(false));
+          .finally(() => queryState.set(false));
       }, [query]);
+
+      const maybeAutoRefresh = React.useCallback(() => {
+        // If a query is already in flight, do not start another one.
+        if (queryState.get()) return;
+        // Auto refresh is throttled to once per 15 seconds.
+        const last = lastResult;
+        if (last && Date.now() - last.queriedAt.getTime() < AUTO_REFRESH_MS) return;
+        refresh();
+      }, [refresh]);
 
       const toggleOpen = () => {
         const next = !open;
@@ -323,13 +360,13 @@ window.__ModuleLoader__.load({
           } else {
             setState({ kind: "loading" });
           }
-          refresh();
+          maybeAutoRefresh();
         }
       };
 
       const handleMouseEnter = () => {
         setHover(true);
-        if (!lastResult) refresh();
+        maybeAutoRefresh();
       };
       const handleMouseLeave = () => setHover(false);
 
@@ -353,13 +390,18 @@ window.__ModuleLoader__.load({
       if (provider !== PROVIDER_ID) return null;
 
       const cached = cache || lastResult;
-      let tooltipText = t("noData");
       const rolling = cached && cached.value && cached.value.usage && cached.value.usage.rolling;
+      let tooltipContent;
       if (rolling && typeof rolling.percent === "number") {
         const remaining = Math.max(0, Math.min(100, 100 - rolling.percent));
-        tooltipText = `${t("rolling")} ${t("remaining")} ${remaining}%`;
+        tooltipContent = React.createElement(React.Fragment, null,
+          `${t("rolling")} ${t("remaining")} ${remaining}%`,
+          refreshing && React.createElement("span", { style: styles.tooltipRefresh }, `⟳ ${t("refreshing")}`)
+        );
       } else if (refreshing) {
-        tooltipText = t("loading");
+        tooltipContent = React.createElement("span", { style: styles.tooltipRefresh }, `⟳ ${t("loading")}`);
+      } else {
+        tooltipContent = t("noData");
       }
 
       return React.createElement("span", { ref: rootRef, style: { position: "relative", display: "inline-flex", alignItems: "center" } },
@@ -383,7 +425,7 @@ window.__ModuleLoader__.load({
             })
           )
         ),
-        hover && tooltipText && React.createElement("div", { style: styles.tooltip }, tooltipText),
+        hover && tooltipContent && React.createElement("div", { style: styles.tooltip }, tooltipContent),
         open && React.createElement("div", { style: styles.panel, role: "dialog", "aria-label": t("title") },
           React.createElement("h4", { style: styles.panelTitle }, t("title")),
           React.createElement(UsagePopover, {
