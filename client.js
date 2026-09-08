@@ -40,8 +40,11 @@ window.__ModuleLoader__.load({
 
     // Required client services: slots for the composer right-side seat, locale
     // for copy, remote for the Host RPC, and modelDirectories to read the
-    // current session's selected provider.
-    const inject = ["slots", "locale", "remote"];
+    // current session's selected provider. modelDirectories must be declared
+    // here so activation waits for it: dsh >= 0.1.3 activates client rows as
+    // their injected services resolve, and probing it with ctx.get() at apply
+    // time can run before the service exists, silently dropping the icon.
+    const inject = ["slots", "locale", "remote", "modelDirectories"];
 
     const zh = {
       title: "OpenCode Go 额度",

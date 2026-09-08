@@ -40,7 +40,7 @@ dsh web
 建议使用 tag 固定版本：
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.1.2
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.0
 ```
 
 ## 配置
@@ -107,6 +107,10 @@ Web 端通过 `modelDirectories` 读取当前会话实际选择的 provider：
 
 - 当前 provider 为 `opencode-go`：显示图标
 - 当前 provider 不是 `opencode-go`：不显示图标
+
+自 v0.2.0 起，客户端在 `inject` 中显式声明 `modelDirectories` 依赖，激活会等待
+模型选择服务就绪后再注册图标。若不声明，dsh >= 0.1.3（客户端按注入服务逐个
+激活插件）可能在该服务建立前执行 `apply` 并静默返回，导致图标不再出现。
 
 ## 已知限制
 

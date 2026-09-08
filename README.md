@@ -40,7 +40,7 @@ dsh web
 Pin a release tag for stable installs:
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.1.2
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.0
 ```
 
 ## Configuration
@@ -106,6 +106,12 @@ The web client reads the current session's selected provider via `modelDirectori
 
 - current provider is `opencode-go` → show the icon
 - current provider is not `opencode-go` → hide the icon
+
+Since v0.2.0 the client declares `modelDirectories` in its `inject` list, so
+activation waits for the model-selection service before registering the icon.
+Without that declaration, dsh >= 0.1.3 (which activates client rows as their
+injected services resolve) could run `apply` before the service exists and
+silently never show the icon.
 
 ## Known limitations
 
