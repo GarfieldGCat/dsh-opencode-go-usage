@@ -8,4 +8,8 @@
       config:
         baseUrl: https://opencode.ai/zen/go/v1/usage
         timeoutMs: 15000
-        providerId: opencode-go
+        # Route keys that satisfy the Settings -> Models precondition. Routes
+        # derived from the catalog id (opencode-go-extra, ...) are recognized
+        # even when they are not listed here.
+        providerIds:
+          - opencode-go

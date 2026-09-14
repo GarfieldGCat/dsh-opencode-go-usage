@@ -97,11 +97,22 @@ function pickWindow(w) {
   };
 }
 
-function providerConfigured(pi, providerId) {
+/**
+ * Whether Settings -> Models configures at least one OpenCode Go route.
+ * `providerIds` holds the route keys the deployment named explicitly; a key
+ * derived from the catalog id (`opencode-go-*`) also counts, mirroring the
+ * client half's visibility rule, because such a route serves the same
+ * account-wide quota endpoint.
+ */
+function providerConfigured(pi, providerIds) {
   if (!pi || typeof pi !== "object") return false;
   const providers = pi.providers;
   if (!providers || typeof providers !== "object" || Array.isArray(providers)) return false;
-  return providers[providerId] !== undefined && providers[providerId] !== null;
+  const present = (id) => providers[id] !== undefined && providers[id] !== null;
+  if (providerIds.some(present)) return true;
+  return Object.keys(providers).some(
+    (id) => id === DEFAULT_PROVIDER_ID || id.startsWith(`${DEFAULT_PROVIDER_ID}-`),
+  );
 }
 
 async function fetchUsage(baseUrl, timeoutMs, apiKey) {
@@ -150,18 +161,25 @@ export function apply(ctx, config) {
   const cfg = config ?? {};
   const baseUrl = typeof cfg.baseUrl === "string" && cfg.baseUrl.length > 0 ? cfg.baseUrl : DEFAULT_BASE_URL;
   const timeoutMs = Number.isSafeInteger(cfg.timeoutMs) && cfg.timeoutMs > 0 ? cfg.timeoutMs : DEFAULT_TIMEOUT_MS;
-  const providerId = typeof cfg.providerId === "string" && cfg.providerId.length > 0 ? cfg.providerId : DEFAULT_PROVIDER_ID;
+  // `providerIds` (list) wins; the older single `providerId` stays supported.
+  // Derived `opencode-go-*` routes satisfy the precondition even when neither
+  // key names them (see providerConfigured).
+  const providerIds = Array.isArray(cfg.providerIds) && cfg.providerIds.length > 0
+    ? cfg.providerIds.filter((value) => typeof value === "string" && value.length > 0)
+    : typeof cfg.providerId === "string" && cfg.providerId.length > 0
+      ? [cfg.providerId]
+      : [DEFAULT_PROVIDER_ID];
 
   const service = {
     async usage() {
-      // Precondition: opencode-go must be present in Settings -> Models.
+      // Precondition: an OpenCode Go route must be present in Settings -> Models.
       let configured = false;
       let reason = null;
       const settings = getService(ctx, "settings");
       if (settings && typeof settings.get === "function") {
         try {
           const pi = settings.get(PROVIDER_SETTINGS_NS);
-          configured = providerConfigured(pi, providerId);
+          configured = providerConfigured(pi, providerIds);
           reason = configured ? null : "not-in-models";
         } catch {
           configured = false;

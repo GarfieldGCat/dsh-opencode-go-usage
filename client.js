@@ -1,9 +1,12 @@
 // Client half of the dsh-opencode-go-usage plugin.
 //
 // Adds a small OpenCode Go quota icon next to the composer's context meter
-// (the "context status" area). The icon is visible only while the current
-// session's selected provider is opencode-go. Clicking it opens a popover with
-// the 5h rolling / weekly / monthly remaining quota.
+// (the "context status" area). The icon is visible while the current session's
+// selected provider is an OpenCode Go route: the installed catalog id
+// `opencode-go`, or a route key derived from it (`opencode-go-*`, e.g. a
+// hand-declared route carrying models the built-in catalog has not caught up
+// with yet). Clicking it opens a popover with the 5h rolling / weekly / monthly
+// remaining quota.
 window.__ModuleLoader__.load({
   id: "dsh-opencode-go-usage",
   factory: (require) => {
@@ -14,6 +17,15 @@ window.__ModuleLoader__.load({
 
     const NS = "settings.opencodeGoUsage";
     const PROVIDER_ID = "opencode-go";
+    // OpenCode Go routes: the installed pi-ai catalog id plus every route key
+    // derived from it (`opencode-go-extra`, ...). The quota is account-wide, so
+    // a custom route pointing at the same endpoint shows the same icon. This
+    // rule is fixed here because the client half cannot read the cordis row
+    // config (the client `apply` receives no config); it mirrors the host
+    // half's derived-route recognition in index.js.
+    const isOpenCodeGoRoute = (provider) =>
+      typeof provider === "string"
+      && (provider === PROVIDER_ID || provider.startsWith(`${PROVIDER_ID}-`));
     // Last successful usage result. OpenCode Go quota is account/provider-wide,
     // so the cache is global rather than per-session.
     let lastResult = null;
@@ -390,7 +402,7 @@ window.__ModuleLoader__.load({
         };
       }, [open]);
 
-      if (provider !== PROVIDER_ID) return null;
+      if (!isOpenCodeGoRoute(provider)) return null;
 
       const cached = cache || lastResult;
       const rolling = cached && cached.value && cached.value.usage && cached.value.usage.rolling;

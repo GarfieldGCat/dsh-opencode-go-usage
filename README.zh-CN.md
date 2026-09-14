@@ -5,15 +5,16 @@
 
 - 鼠标悬停图标：显示 5 小时滚动额度剩余，并开始自动查询（受 15 秒自动刷新间隔限制）
 - 点击图标：展开面板，显示 5h / 每周 / 每月额度的剩余、已用百分比和重置时间
-- 只在当前会话选择的模型提供商是 `opencode-go` 时显示图标
+- 当前会话选择的模型提供商是 OpenCode Go 路由时显示图标：`opencode-go`，
+  或由它派生的路由键（`opencode-go-extra` 等自定义路由）
 - 缓存最后一次成功查询：再次打开时立即显示缓存结果和查询时间，随后后台静默刷新
 - 查询进行中时，悬停提示会显示 `刷新中…`；此时点击展开不会重复发起查询
 - 自动查询间隔为 15 秒：15 秒内不会重复自动查询，但手动点击“刷新”始终会查询
 
 ## 截图
 
-安装并重启 `dsh web` 后，打开一个使用 `opencode-go` 的会话，输入框右侧会
-出现一个小图标。点击后弹出：
+安装并重启 `dsh web` 后，打开一个使用 OpenCode Go 路由的会话（`opencode-go`
+或派生的 `opencode-go-extra` 等），输入框右侧会出现一个小图标。点击后弹出：
 
 ```text
 OpenCode Go 额度
@@ -40,7 +41,7 @@ dsh web
 建议使用 tag 固定版本：
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.0
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.1
 ```
 
 ## 配置
@@ -53,14 +54,21 @@ dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.0
   config:
     baseUrl: https://opencode.ai/zen/go/v1/usage
     timeoutMs: 15000
-    providerId: opencode-go
+    providerIds:
+      - opencode-go
+      - opencode-go-extra
 ```
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `baseUrl` | `https://opencode.ai/zen/go/v1/usage` | OpenCode Go 用量接口 |
 | `timeoutMs` | `15000` | 查询超时时间（毫秒） |
-| `providerId` | `opencode-go` | 需要匹配的模型提供商 id |
+| `providerIds` | `["opencode-go"]` | 出现在「设置 → 模型」里即满足 host 前置检查的路由键；派生的 `opencode-go-*` 路由即使不列在这里也会被识别 |
+| `providerId` | — | 已废弃的单值写法，仍兼容 |
+
+浏览器端读不到这份 config，因此它按规则匹配目录 id `opencode-go` 以及任何
+`opencode-go-*` 派生路由键。若自定义路由取了别的名字，需要在 `client.js` 的
+`isOpenCodeGoRoute` 里补一行。
 
 ## API Key 解析顺序
 
@@ -105,8 +113,12 @@ Authorization: Bearer <API_KEY>
 
 Web 端通过 `modelDirectories` 读取当前会话实际选择的 provider：
 
-- 当前 provider 为 `opencode-go`：显示图标
-- 当前 provider 不是 `opencode-go`：不显示图标
+- provider 是 `opencode-go`，或由它派生的路由键（`opencode-go-*`，例如承载
+  目录尚未收录模型的自定义路由 `opencode-go-extra`）：显示图标
+- 其他 provider：不显示图标
+
+host 端检查「设置 → 模型」时用的是同一条规则，因此派生路由会返回真实额度，
+而不是 `not-in-models`。
 
 自 v0.2.0 起，客户端在 `inject` 中显式声明 `modelDirectories` 依赖，激活会等待
 模型选择服务就绪后再注册图标。若不声明，dsh >= 0.1.3（客户端按注入服务逐个

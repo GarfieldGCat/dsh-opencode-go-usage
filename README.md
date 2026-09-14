@@ -5,7 +5,7 @@ context status area in the chat composer.
 
 - Hover the icon: shows the 5-hour rolling quota remaining and starts an auto refresh (throttled to once every 15 seconds)
 - Click the icon: opens a panel with remaining / used percentages and reset times for 5h, weekly, and monthly windows
-- The icon is visible only when the current session's selected provider is `opencode-go`
+- The icon is visible when the current session's selected provider is an OpenCode Go route: `opencode-go` or a route key derived from it (`opencode-go-extra`, ...)
 - Caches the last successful result globally: reopening the panel shows cached data and last query time immediately, then refreshes in the background
 - While a query is in flight, the hover tooltip shows `refreshing…`; clicking the icon during that time does not start a duplicate request
 - Auto refresh is limited to once per 15 seconds; manual refresh always queries
@@ -40,7 +40,7 @@ dsh web
 Pin a release tag for stable installs:
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.0
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.1
 ```
 
 ## Configuration
@@ -53,14 +53,21 @@ You can override the plugin config in your web profile's `cordis.patch.yml`:
   config:
     baseUrl: https://opencode.ai/zen/go/v1/usage
     timeoutMs: 15000
-    providerId: opencode-go
+    providerIds:
+      - opencode-go
+      - opencode-go-extra
 ```
 
 | Key | Default | Description |
 | --- | --- | --- |
 | `baseUrl` | `https://opencode.ai/zen/go/v1/usage` | OpenCode Go usage endpoint |
 | `timeoutMs` | `15000` | Request timeout in milliseconds |
-| `providerId` | `opencode-go` | Provider id that must match the current model provider |
+| `providerIds` | `["opencode-go"]` | Route keys whose presence in Settings → Models satisfies the host precondition. Derived `opencode-go-*` routes count even when they are not listed. |
+| `providerId` | — | Deprecated single-key form of `providerIds`; still accepted |
+
+The browser half cannot read this config, so it matches the catalog id
+`opencode-go` plus any `opencode-go-*` derived key by rule. A custom route named
+anything else needs a one-line change to `isOpenCodeGoRoute` in `client.js`.
 
 ## API key resolution
 
@@ -104,8 +111,11 @@ The endpoint returns used percentages. The plugin displays `remaining = 100 - pe
 
 The web client reads the current session's selected provider via `modelDirectories`:
 
-- current provider is `opencode-go` → show the icon
-- current provider is not `opencode-go` → hide the icon
+- provider is `opencode-go`, or any route key derived from it (`opencode-go-*`, e.g. a custom `opencode-go-extra` route serving models the installed pi-ai catalog has not shipped yet) → show the icon
+- any other provider → hide the icon
+
+The host half applies the same rule when it checks Settings → Models, so a
+derived route reports real quota instead of `not-in-models`.
 
 Since v0.2.0 the client declares `modelDirectories` in its `inject` list, so
 activation waits for the model-selection service before registering the icon.
