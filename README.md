@@ -40,7 +40,7 @@ dsh web
 Pin a release tag for stable installs:
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.3.0
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.3.1
 ```
 
 ## Compatibility
@@ -139,6 +139,13 @@ The web client reads the current session's selected provider via `modelDirectori
 
 The host half applies the same rule when it checks Settings → Models, so a
 derived route reports real quota instead of `not-in-models`.
+
+The host reads that catalog through the settings service's current surface
+(`describe()` on dsh >= 0.2, the older `get(ns)` before it). A settings surface
+the plugin cannot read at all leaves the verdict undetermined and it proceeds to
+the request rather than reporting `not-in-models`: the icon is already gated on
+the session's live provider, so refusing there would only replace a real request
+with a misleading message.
 
 Since v0.2.0 the client declares `modelDirectories` in its `inject` list, so
 activation waits for the model-selection service before registering the icon.

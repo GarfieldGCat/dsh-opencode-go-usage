@@ -41,7 +41,7 @@ dsh web
 建议使用 tag 固定版本：
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.3.0
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.3.1
 ```
 
 ## 兼容性
@@ -140,6 +140,11 @@ Web 端通过 `modelDirectories` 读取当前会话实际选择的 provider：
 
 host 端检查「设置 → 模型」时用的是同一条规则，因此派生路由会返回真实额度，
 而不是 `not-in-models`。
+
+host 端按设置服务当前的可读接口读取该目录（dsh >= 0.2 是 `describe()`，更早是
+`get(ns)`）。如果这个接口完全读不到，结论记为「未定」，插件直接继续发起请求，
+而不是报 `not-in-models`：图标本身已经由会话当前 provider 把关，此时拒绝只会
+用一个误导性提示替换掉一次真实请求。
 
 自 v0.2.0 起，客户端在 `inject` 中显式声明 `modelDirectories` 依赖，激活会等待
 模型选择服务就绪后再注册图标。若不声明，dsh >= 0.1.3（客户端按注入服务逐个

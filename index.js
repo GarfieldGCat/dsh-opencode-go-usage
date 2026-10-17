@@ -115,6 +115,39 @@ function providerConfigured(pi, providerIds) {
   );
 }
 
+/**
+ * Read the live Settings -> Models document for the pi-ai provider catalog.
+ *
+ * dsh 0.2 replaced the settings service's `get(ns)` with `describe()`, which
+ * returns one form per profile entry id: the plugin reads the same `value` the
+ * Settings -> Models page renders. The legacy accessor stays first so an older
+ * release keeps working.
+ *
+ * @returns the pi-ai config document, or undefined when no read surface answered.
+ */
+function readProviderSettings(settings) {
+  if (settings === null || typeof settings !== "object") return undefined;
+  if (typeof settings.get === "function") {
+    try {
+      const document = settings.get(PROVIDER_SETTINGS_NS);
+      if (document !== undefined && document !== null) return document;
+    } catch {
+      // fall through to the newer read surface
+    }
+  }
+  if (typeof settings.describe === "function") {
+    try {
+      const row = settings.describe().find((candidate) => candidate !== null
+        && typeof candidate === "object"
+        && candidate.ns === PROVIDER_SETTINGS_NS);
+      if (row !== undefined) return row.value ?? row.user ?? row.base ?? row;
+    } catch {
+      // fall through to an undetermined verdict
+    }
+  }
+  return undefined;
+}
+
 async function fetchUsage(baseUrl, timeoutMs, apiKey) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -173,23 +206,16 @@ export function apply(ctx, config) {
   const service = {
     async usage() {
       // Precondition: an OpenCode Go route must be present in Settings -> Models.
-      let configured = false;
-      let reason = null;
+      // An undetermined settings surface (no service, or a release whose read API
+      // this plugin does not know) is NOT a negative verdict: the browser half
+      // already gates the icon on the session's live provider, so refusing here
+      // would replace a real request with a misleading "not in Models" message.
+      let configured = null;
       const settings = getService(ctx, "settings");
-      if (settings && typeof settings.get === "function") {
-        try {
-          const pi = settings.get(PROVIDER_SETTINGS_NS);
-          configured = providerConfigured(pi, providerIds);
-          reason = configured ? null : "not-in-models";
-        } catch {
-          configured = false;
-          reason = "not-in-models";
-        }
-      } else {
-        reason = "not-in-models";
-      }
-      if (!configured) {
-        return { configured: false, reason, error: null, usage: null };
+      const pi = readProviderSettings(settings);
+      if (pi !== undefined) configured = providerConfigured(pi, providerIds);
+      if (configured === false) {
+        return { configured: false, reason: "not-in-models", error: null, usage: null };
       }
 
       const apiKey = await resolveApiKey(ctx);
