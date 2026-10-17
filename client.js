@@ -101,6 +101,35 @@ window.__ModuleLoader__.load({
       unknown: "unknown",
     };
 
+    // Result codec of this Remote, mirroring the host manifest in typert.host.js.
+    // dsh >= 0.2 validates every strict codec where it is registered and requires
+    // a `create()` factory; the bare `schema` object this plugin used before is
+    // rejected there with "result strict codec has no create() factory", which
+    // aborts the whole client plugin. zod is required lazily because it is a
+    // dsh >= 0.2 platform seed module: on older releases this factory is never
+    // called (nothing validated it) and the bundle keeps loading without zod.
+    let resultSchema;
+    const createResultSchema = () => {
+      if (resultSchema !== undefined) return resultSchema;
+      const zod = require("zod");
+      const windowSchema = zod.object({
+        status: zod.string().nullable(),
+        percent: zod.number().nullable(),
+        resetsAt: zod.string().nullable(),
+      });
+      resultSchema = zod.object({
+        configured: zod.boolean(),
+        reason: zod.string().nullable(),
+        error: zod.string().nullable(),
+        usage: zod.object({
+          rolling: windowSchema.nullable(),
+          weekly: windowSchema.nullable(),
+          monthly: windowSchema.nullable(),
+        }).nullable(),
+      });
+      return resultSchema;
+    };
+
     // Client-side Remote contribution.
     const TYPERT_REMOTE = {
       package: "dsh-opencode-go-usage",
@@ -115,7 +144,7 @@ window.__ModuleLoader__.load({
           result: {
             mode: "strict",
             typeSymbol: "dsh-opencode-go-usage#OpencodeUsageResult",
-            schema: { parse(value) { return value; } },
+            create: createResultSchema,
           },
         },
       ],

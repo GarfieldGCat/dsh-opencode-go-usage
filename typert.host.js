@@ -1,6 +1,12 @@
 // Generated-by-hand Typert host manifest for the opencodeUsage Remote.
-// Uses a real zod v4 schema because the typert-loader and typert-registry
-// expect strict codecs to be backed by zod v4 (the schema carries `_zod`).
+//
+// A strict codec is declared as `mode` + `typeSymbol` + a `create()` factory
+// returning a zod v4 schema. dsh >= 0.2 requires the factory: the typert
+// loader's schema projection reads `codec.create`, so a manifest carrying a
+// bare `schema` fails validation and takes the whole typert contributor down
+// ("... result codec has no create() factory"). dsh 0.1 ignored the extra
+// field, so this form stays loadable there too.
+//
 // The local `link:` install resolves zod from this package's own node_modules.
 import { z } from "zod";
 
@@ -36,7 +42,7 @@ export const TYPERT = {
       result: {
         mode: "strict",
         typeSymbol: "dsh-opencode-go-usage#OpencodeUsageResult",
-        schema: resultSchema,
+        create: () => resultSchema,
       },
     },
   ],

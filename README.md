@@ -40,8 +40,31 @@ dsh web
 Pin a release tag for stable installs:
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.1
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.3.0
 ```
+
+## Compatibility
+
+| dsh | Status |
+| --- | --- |
+| `0.2.1-rc.2` and later | supported |
+| `0.1.x` – `0.2.0` | still loads |
+
+dsh 0.2 validates every strict Typert codec where it is registered — the
+invocation result codec in `typert.host.js` and the matching descriptor in
+`client.js` — and requires each to expose a `create()` factory returning the
+schema. A codec carrying only a bare `schema` is refused, and because the typert
+loader aggregates contributor failures, one such codec aborts the whole
+activation pass and the plugin never loads:
+
+```text
+typert-loader: dsh-opencode-go-usage invocation
+"dsh-opencode-go-usage#opencodeUsage/usage" result codec has no create() factory
+```
+
+Earlier releases ignored the field, so the `create()` form in this release works
+on both. See `typert.host.js` and the contribution in `client.js` for the exact
+declaration.
 
 ## Configuration
 

@@ -41,8 +41,29 @@ dsh web
 建议使用 tag 固定版本：
 
 ```sh
-dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.2.1
+dsh plugin --profile web add github:GarfieldGCat/dsh-opencode-go-usage#v0.3.0
 ```
+
+## 兼容性
+
+| dsh 版本 | 状态 |
+| --- | --- |
+| `0.2.1-rc.2` 及以后 | 支持 |
+| `0.1.x` – `0.2.0` | 仍可加载 |
+
+dsh 0.2 会在注册处校验每一个 strict 类型的 Typert 编解码器——`typert.host.js`
+里的调用结果编解码器，以及 `client.js` 里对应的描述符——要求它们提供返回
+schema 的 `create()` 工厂。只带一个裸 `schema` 的编解码器会被拒绝；而 typert
+loader 会把各贡献者的失败聚合上报，所以一个不合规的编解码器会直接中断整个激活
+流程，插件完全无法加载：
+
+```text
+typert-loader: dsh-opencode-go-usage invocation
+"dsh-opencode-go-usage#opencodeUsage/usage" result codec has no create() factory
+```
+
+旧版本忽略这个字段，因此本版本采用的 `create()` 写法在两端都能用。具体声明见
+`typert.host.js` 和 `client.js` 中的贡献定义。
 
 ## 配置
 
